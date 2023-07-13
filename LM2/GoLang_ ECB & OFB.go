@@ -5,10 +5,11 @@ import (
 	"strconv"
 )
 
-var codebook = [4][2]int{{0b00, 0b01}, {0b01, 0b10}, {0b10, 0b11}, {0b11, 0b00}}
+var codebook = [4][2]int{{0b00, 0b01}, {0b01, 0b10}, {0b10, 0b11}, {0b11, 0b00}} // Codebook used for encryption and decryption
 
-var iv int = 0b10
+var iv int = 0b10 // Initialization Vector (IV) for OFB mode
 
+// Function to look up the codebook and find the corresponding ciphertext value for a given XOR value
 func codebookLookup(xor int) int {
 	for i := 0; i < 4; i++ {
 		if codebook[i][0] == xor {
@@ -18,6 +19,7 @@ func codebookLookup(xor int) int {
 	return 0
 }
 
+// Function to reverse lookup the codebook and find the corresponding plaintext value for a given ciphertext
 func codebookReverseLookup(ciphertext int) int {
 	for i := 0; i < 4; i++ {
 		if codebook[i][1] == ciphertext {
@@ -48,6 +50,7 @@ func main() {
 	fmt.Printf("Plaintext: %b\n", message)
 	ciphertext := make([]int, plaintextLen)
 
+	// Encryption using ECB mode
 	for i := 0; i < plaintextLen; i++ {
 		ciphertext[i] = codebookLookup(message[i])
 		fmt.Printf("The ciphered value of %b is %b\n", message[i], ciphertext[i])
@@ -56,6 +59,7 @@ func main() {
 	fmt.Println("\nECB decryption details:")
 	decryptedPlaintext := make([]int, plaintextLen)
 
+	// Decryption using ECB mode
 	for i := 0; i < plaintextLen; i++ {
 		decryptedPlaintext[i] = codebookReverseLookup(ciphertext[i])
 		fmt.Printf("The deciphered value of %b is %b\n", ciphertext[i], decryptedPlaintext[i])
@@ -68,6 +72,7 @@ func main() {
 	stream := iv
 	ciphertext = make([]int, plaintextLen)
 
+	// Encryption using OFB mode
 	for i := 0; i < plaintextLen; i++ {
 		xor := message[i] ^ stream
 		ciphertext[i] = codebookLookup(xor)
@@ -79,6 +84,7 @@ func main() {
 	stream = iv
 	decryptedPlaintext = make([]int, plaintextLen)
 
+	// Decryption using OFB mode
 	for i := 0; i < plaintextLen; i++ {
 		xor := ciphertext[i] ^ stream
 		decryptedPlaintext[i] = codebookReverseLookup(xor)
