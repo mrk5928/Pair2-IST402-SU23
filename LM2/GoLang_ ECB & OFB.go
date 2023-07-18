@@ -1,96 +1,129 @@
 package main
 
-import (
-	"fmt"
-	"strconv"
-)
+import "fmt"
 
-var codebook = [4][2]int{{0b00, 0b01}, {0b01, 0b10}, {0b10, 0b11}, {0b11, 0b00}} // Codebook used for encryption and decryption
+// Codebook (substitute with your own block cipher implementation if needed)
+var Codebook = [4][2]int{{0b00, 0b01}, {0b01, 0b10}, {0b10, 0b11}, {0b11, 0b00}}
 
-var iv int = 0b10 // Initialization Vector (IV) for OFB mode
+// ECB encryption
+func ecbEncrypt(plaintext []int) []int {
+	ciphertext := make([]int, len(plaintext))
 
-// Function to look up the codebook and find the corresponding ciphertext value for a given XOR value
+	for i := 0; i < len(plaintext); i++ {
+		ciphertext[i] = codebookLookup(plaintext[i])
+	}
+
+	return ciphertext
+}
+
+// ECB decryption
+func ecbDecrypt(ciphertext []int) []int {
+	plaintext := make([]int, len(ciphertext))
+
+	for i := 0; i < len(ciphertext); i++ {
+		plaintext[i] = codebookLookupbyValue(ciphertext[i])
+	}
+
+	return plaintext
+}
+
+// OFB encryption
+func ofbEncrypt(plaintext []int, iv int) []int {
+	ciphertext := make([]int, len(plaintext))
+	keystream := generateKeystream(iv, len(plaintext))
+
+	for i := 0; i < len(plaintext); i++ {
+		ciphertext[i] = keystream[i] ^ plaintext[i]
+	}
+
+	return ciphertext
+}
+
+// OFB decryption
+func ofbDecrypt(ciphertext []int, iv int) []int {
+	plaintext := make([]int, len(ciphertext))
+	keystream := generateKeystream(iv, len(ciphertext))
+
+	for i := 0; i < len(ciphertext); i++ {
+		plaintext[i] = keystream[i] ^ ciphertext[i]
+	}
+
+	return plaintext
+}
+
 func codebookLookup(xor int) int {
 	for i := 0; i < 4; i++ {
-		if codebook[i][0] == xor {
-			return codebook[i][1]
+		if Codebook[i][0] == xor {
+			return Codebook[i][1]
 		}
 	}
 	return 0
 }
 
-// Function to reverse lookup the codebook and find the corresponding plaintext value for a given ciphertext
-func codebookReverseLookup(ciphertext int) int {
+func codebookLookupbyValue(xor int) int {
 	for i := 0; i < 4; i++ {
-		if codebook[i][1] == ciphertext {
-			return codebook[i][0]
+		if Codebook[i][1] == xor {
+			return Codebook[i][0]
 		}
 	}
 	return 0
 }
+
+func generateKeystream(iv int, length int) []int {
+	keystream := make([]int, length)
+	keystream[0] = codebookLookup(iv) // Use IV to start the keystream
+
+	for i := 1; i < length; i++ {
+		keystream[i] = codebookLookup(keystream[i-1]) // Generate the next keystream block
+	}
+
+	return keystream
+}
+
+var message = [4]int{0b01, 0b00, 0b10, 0b00}
+var IV = 0b10 // Initialization Vector, it should be random and unique for each encryption
 
 func main() {
-	var plaintextStr string
-	fmt.Print("Enter the plaintext (a sequence of 2-bit values): ")
-	fmt.Scan(&plaintextStr)
+	// Convert the message array to a slice
+	plaintext := message[:]
 
-	plaintextLen := len(plaintextStr)
-	message := make([]int, plaintextLen)
-
-	for i, char := range plaintextStr {
-		bit, err := strconv.Atoi(string(char))
-		if err != nil || (bit != 0 && bit != 1) {
-			fmt.Println("Invalid input. The plaintext should only consist of 0s and 1s.")
-			return
-		}
-		message[i] = bit
+	// ECB encryption and decryption
+	fmt.Println("ECB Encryption and Decryption:")
+	ciphertextECB := ecbEncrypt(plaintext)
+	fmt.Println("The plaintext values:")
+	for i := 0; i < len(plaintext); i++ {
+		fmt.Printf("The plaintext value of a is %02b\n", plaintext[i])
 	}
 
-	fmt.Println("ECB encryption details:")
-	fmt.Printf("Plaintext: %b\n", message)
-	ciphertext := make([]int, plaintextLen)
-
-	// Encryption using ECB mode
-	for i := 0; i < plaintextLen; i++ {
-		ciphertext[i] = codebookLookup(message[i])
-		fmt.Printf("The ciphered value of %b is %b\n", message[i], ciphertext[i])
+	fmt.Println("The ciphered values:")
+	for i := 0; i < len(ciphertextECB); i++ {
+		fmt.Printf("The ciphered value of a is %02b\n", ciphertextECB[i])
 	}
 
-	fmt.Println("\nECB decryption details:")
-	decryptedPlaintext := make([]int, plaintextLen)
-
-	// Decryption using ECB mode
-	for i := 0; i < plaintextLen; i++ {
-		decryptedPlaintext[i] = codebookReverseLookup(ciphertext[i])
-		fmt.Printf("The deciphered value of %b is %b\n", ciphertext[i], decryptedPlaintext[i])
+	decryptedECB := ecbDecrypt(ciphertextECB)
+	fmt.Println("The decrypted plaintext values:")
+	for i := 0; i < len(decryptedECB); i++ {
+		fmt.Printf("The plaintext value of a is %02b\n", decryptedECB[i])
 	}
 
-	fmt.Printf("\nDecrypted ECB message: %b\n", decryptedPlaintext)
+	fmt.Println()
 
-	fmt.Println("\nOFB encryption details:")
-	fmt.Printf("Plaintext: %b\n", message)
-	stream := iv
-	ciphertext = make([]int, plaintextLen)
-
-	// Encryption using OFB mode
-	for i := 0; i < plaintextLen; i++ {
-		xor := message[i] ^ stream
-		ciphertext[i] = codebookLookup(xor)
-		stream = codebookLookup(stream) // Update the stream value using codebook lookup
-		fmt.Printf("The ciphered value of %b is %b\n", message[i], ciphertext[i])
+	// OFB encryption and decryption
+	fmt.Println("OFB Encryption and Decryption:")
+	ciphertextOFB := ofbEncrypt(plaintext, IV)
+	fmt.Println("The plaintext values:")
+	for i := 0; i < len(plaintext); i++ {
+		fmt.Printf("The plaintext value of a is %02b\n", plaintext[i])
 	}
 
-	fmt.Println("\nOFB decryption details:")
-	stream = iv
-	decryptedPlaintext = make([]int, plaintextLen)
-
-	// Decryption using OFB mode
-	for i := 0; i < plaintextLen; i++ {
-		xor := ciphertext[i] ^ stream
-		decryptedPlaintext[i] = codebookReverseLookup(xor)
-		stream = codebookLookup(ciphertext[i]) // Update the stream value using codebook lookup
-		fmt.Printf("The deciphered value of %b is %b\n", ciphertext[i], decryptedPlaintext[i])
+	fmt.Println("The ciphered values:")
+	for i := 0; i < len(ciphertextOFB); i++ {
+		fmt.Printf("The ciphered value of a is %02b\n", ciphertextOFB[i])
 	}
 
-	fmt.Printf("\nDecrypted OFB message: %b\n", decryptedPlaintext)
+	decryptedOFB := ofbDecrypt(ciphertextOFB, IV)
+	fmt.Println("The decrypted plaintext values:")
+	for i := 0; i < len(decryptedOFB); i++ {
+		fmt.Printf("The plaintext value of a is %02b\n", decryptedOFB[i])
+	}
 }
