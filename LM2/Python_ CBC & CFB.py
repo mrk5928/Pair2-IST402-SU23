@@ -1,83 +1,73 @@
-codebook = [
-    [0b00, 0b01],  # Codebook entry: 00 -> 01
-    [0b01, 0b10],  # Codebook entry: 01 -> 10
-    [0b10, 0b11],  # Codebook entry: 10 -> 11
-    [0b11, 0b00]   # Codebook entry: 11 -> 00
-]
+codebook = [[0b00, 0b01], [0b01, 0b10], [0b10, 0b11], [0b11, 0b00]]
+messages = [0b01, 0b00, 0b10, 0b00]
+cipherCBC = [0] * 4
+cipherCFB = [0] * 4
+iv = 0b10
 
-plaintext = input("Enter the plaintext (binary): ")
-message = [int(bit) for bit in plaintext]
-
-message1 = []
-
-iv = 0b10  # Initialization Vector
-
-def codebookLookup(xor):
-    # Look up the codebook for the given XOR value
-    for i in range(4):
+def codesbookLookup(xor):
+    for i in range(len(codebook)):
         if codebook[i][0] == xor:
-            lookupValue = codebook[i][1]
-            return lookupValue
+            return codebook[i][1]
+    return -1
 
-# Convert plaintext to a list of binary strings
-for i in range(len(message)):
-    a = f"{message[i]:b}"
-    message1.append(a)
+def encryptBlockCBC(plaintext, iv):
+    xor = plaintext ^ iv
+    return codesbookLookup(xor)
 
-print("\nCBC encryption details:")
-print(f"Plaintext: {message1}" )
+def decryptBlockCBC(ciphertext, iv):
+    xor = codesbookLookup(ciphertext) ^ iv
+    return xor
 
-stream = iv
-ciphertext = []
-for i in range(len(message)):
-    xor = message[i] ^ stream  # XOR the message with the stream
-    ciphertext.append(codebookLookup(xor))  # Encrypt the XOR result using the codebook
-    stream = ciphertext[i]  # Update the stream with the current ciphertext
-    print(f"The ciphered value of {message[i]:b} is {ciphertext[i]:b}")
+def encryptBlockCFB(plaintext, iv):
+    xor = plaintext ^ iv
+    return xor
 
-ciphertext.reverse()
-message.reverse()
+def decryptBlockCFB(ciphertext, iv):
+    xor = ciphertext ^ iv
+    return xor
 
-print("\nCBC decryption details:")
-print(f"Ciphertext: {ciphertext}")
+# CBC Mode
+xor = 0
+lookupValue = codesbookLookup(iv)
 
-stream = iv
-plaintext = []
-for i in range(len(ciphertext)):
-    xor = codebookLookup(ciphertext[i])  # Decrypt the ciphertext using the codebook
-    plaintext.append(xor ^ stream)  # XOR the decrypted value with the stream
-    stream = ciphertext[i]  # Update the stream with the current ciphertext
-    print(f"The deciphered value of {ciphertext[i]:b} is {plaintext[i]:b}")
+# Display the original message
+print("CBC Mode:")
+for i in range(len(messages)):
+    print("The plaintext value of a is", format(messages[i], "02b"))
 
-plaintext.reverse()
-original_plaintext = "".join([str(bit) for bit in plaintext])
-print(f"\nOriginal message: {original_plaintext}")
+# Encryption (CBC)
+for i in range(len(messages)):
+    xor = messages[i] ^ lookupValue
+    lookupValue = codesbookLookup(xor)
+    print("The ciphered value of a in CBC mode is", format(xor, "02b"))
+    cipherCBC[i] = xor
 
-print("\nCFB encryption details:")
-print(f"Plaintext: {message1}")
+# Decryption (CBC)
+lookupValue = codesbookLookup(iv)
+for i in range(len(cipherCBC)):
+    xor = cipherCBC[i] ^ lookupValue
+    lookupValue = codesbookLookup(cipherCBC[i])
+    print("The plaintext value of a in CBC mode is", format(xor, "02b"))
 
-stream = iv
-ciphertext = []
-for i in range(len(message)):
-    xor = message[i] ^ stream  # XOR the message with the stream
-    ciphertext.append(codebookLookup(xor))  # Encrypt the XOR result using the codebook
-    stream = ciphertext[i] ^ iv  # Update the stream with the XOR result of ciphertext and IV
-    print(f"The ciphered value of {message[i]:b} is {ciphertext[i]:b}")
+print()
 
-ciphertext.reverse()
-message.reverse()
+# CFB Mode
+lookupValue = codesbookLookup(iv)
 
-print("\nCFB decryption details:")
-print(f"Ciphertext: {ciphertext}")
+# Display the original message
+print("CFB Mode:")
+for i in range(len(messages)):
+    print("The plaintext value of a is", format(messages[i], "02b"))
 
-stream = iv
-plaintext = []
-for i in range(len(ciphertext)):
-    xor = codebookLookup(ciphertext[i])  # Decrypt the ciphertext using the codebook
-    plaintext.append(xor ^ stream)  # XOR the decrypted value with the stream
-    stream = ciphertext[i] ^ plaintext[i]  # Update the stream with the XOR result of ciphertext and plaintext
-    print(f"The deciphered value of {ciphertext[i]:b} is {plaintext[i]:b}")
+# Encryption (CFB)
+for i in range(len(messages)):
+    cipherCFB[i] = encryptBlockCFB(messages[i], lookupValue)
+    lookupValue = cipherCFB[i]
+    print("The ciphered value of a in CFB mode is", format(cipherCFB[i], "02b"))
 
-plaintext.reverse()
-original_plaintext = "".join([str(bit) for bit in plaintext])
-print(f"\nOriginal message: {original_plaintext}")
+# Decryption (CFB)
+lookupValue = codesbookLookup(iv)
+for i in range(len(cipherCFB)):
+    plaintext = decryptBlockCFB(cipherCFB[i], lookupValue)
+    lookupValue = cipherCFB[i]
+    print("The plaintext value of a in CFB mode is", format(plaintext, "02b"))

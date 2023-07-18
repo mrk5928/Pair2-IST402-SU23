@@ -1,125 +1,96 @@
 package main
 
-import (
-	"fmt"
-	"strconv"
-)
+import "fmt"
 
-var codeBook = [][]int{
-	{0b00, 0b01},
-	{0b01, 0b10},
-	{0b10, 0b11},
-	{0b11, 0b00},
-}
+/* an array with 4 rows and 2 columns */
+var codebook = [4][2]int{{0b00, 0b01}, {0b01, 0b10}, {0b10, 0b11}, {0b11, 0b00}}
+var messages = [4]int{0b01, 0b00, 0b10, 0b00}
+var cipherCBC = [4]int{}
+var cipherCFB = [4]int{}
+var iv int = 0b10
 
-// Function to perform a lookup in the code book and return the corresponding value
-func codebook_Lookup(xor int) int {
-	for i := 0; i < len(codeBook); i++ {
-		if codeBook[i][0] == xor {
-			return codeBook[i][1]
+func codesbookLookup(xor int) int {
+	var i, j int = 0, 0
+	for i = 0; i < 4; i++ {
+		if codebook[i][j] == xor {
+			j++
+			return codebook[i][j]
 		}
 	}
-	return 0
+	return -1 // Return -1 if the lookup fails
+}
+
+func encryptBlockCBC(plaintext, iv int) int {
+	xor := plaintext ^ iv
+	return codesbookLookup(xor)
+}
+
+func decryptBlockCBC(ciphertext, iv int) int {
+	xor := codesbookLookup(ciphertext) ^ iv
+	return xor
+}
+
+func encryptBlockCFB(plaintext, iv int) int {
+	xor := plaintext ^ iv
+	return xor
+}
+
+func decryptBlockCFB(ciphertext, iv int) int {
+	xor := ciphertext ^ iv
+	return xor
 }
 
 func main() {
-	var plaintext string
-	fmt.Print("Enter the plaintext (binary): ")
-	fmt.Scanln(&plaintext)
+	// CBC Mode
+	var xor int = 0
+	var lookupValue int = 0
+	lookupValue = codesbookLookup(iv)
 
-	var message []int
-	for _, bit := range plaintext {
-		num, _ := strconv.Atoi(string(bit))
-		message = append(message, num)
+	// Display the original message
+	fmt.Println("CBC Mode:")
+	for i := 0; i < 4; i++ {
+		fmt.Printf("The plaintext value of a is %02b\n", messages[i])
 	}
 
-	var message1 []string
-	for _, bit := range message {
-		message1 = append(message1, strconv.Itoa(bit))
+	// Encryption (CBC)
+	for i := 0; i < 4; i++ {
+		xor = messages[i] ^ lookupValue
+		lookupValue = codesbookLookup(xor)
+		fmt.Printf("The ciphered value of a in CBC mode is %02b\n", xor)
+		cipherCBC[i] = xor
 	}
 
-	fmt.Println("\nCBC encryption details:")
-	fmt.Printf("Plaintext: %v\n", message1)
-
-	iv := 0b10
-	stream := iv
-	var ciphertext []string
-	for _, bit := range message {
-		xor := bit ^ stream
-		ciphertext = append(ciphertext, strconv.Itoa(codebook_Lookup(xor)))
-		stream = codebook_Lookup(xor)
-		fmt.Printf("The ciphered value of %04b is %04b\n", bit, codebook_Lookup(xor))
+	// Decryption (CBC)
+	lookupValue = codesbookLookup(iv)
+	for i := 0; i < 4; i++ {
+		xor = cipherCBC[i] ^ lookupValue
+		lookupValue = codesbookLookup(cipherCBC[i])
+		fmt.Printf("The plaintext value of a in CBC mode is %02b\n", xor)
 	}
 
-	reverseSlice(ciphertext)
-	reverseSlice(message1)
+	fmt.Println()
 
-	fmt.Println("\nCBC decryption details:")
-	fmt.Printf("Ciphertext: %v\n", ciphertext)
+	// CFB Mode
+	lookupValue = codesbookLookup(iv)
 
-	stream = iv
-	var decryptedMessage []int
-	for _, bit := range ciphertext {
-		cipherInt, _ := strconv.Atoi(bit)
-		xor := codebook_Lookup(cipherInt)
-		decryptedMessage = append(decryptedMessage, xor^stream)
-		stream = cipherInt
-		fmt.Printf("The deciphered value of %04b is %04b\n", cipherInt, xor^stream)
+	// Display the original message
+	fmt.Println("CFB Mode:")
+	for i := 0; i < 4; i++ {
+		fmt.Printf("The plaintext value of a is %02b\n", messages[i])
 	}
 
-	reverseSliceInt(decryptedMessage)
-	var originalPlaintext string
-	for _, bit := range decryptedMessage {
-		originalPlaintext += strconv.Itoa(bit)
-	}
-	fmt.Printf("\nOriginal message: %v\n", originalPlaintext)
-
-	fmt.Println("\nCFB encryption details:")
-	fmt.Printf("Plaintext: %v\n", message1)
-
-	stream = iv
-	ciphertext = nil
-	for _, bit := range message {
-		xor := bit ^ stream
-		ciphertext = append(ciphertext, strconv.Itoa(codebook_Lookup(xor)))
-		stream = codebook_Lookup(xor) ^ iv
-		fmt.Printf("The ciphered value of %04b is %04b\n", bit, codebook_Lookup(xor))
+	// Encryption (CFB)
+	for i := 0; i < 4; i++ {
+		cipherCFB[i] = encryptBlockCFB(messages[i], lookupValue)
+		lookupValue = cipherCFB[i]
+		fmt.Printf("The ciphered value of a in CFB mode is %02b\n", cipherCFB[i])
 	}
 
-	reverseSlice(ciphertext)
-	reverseSlice(message1)
-
-	fmt.Println("\nCFB decryption details:")
-	fmt.Printf("Ciphertext: %v\n", ciphertext)
-
-	stream = iv
-	decryptedMessage = nil
-	for _, bit := range ciphertext {
-		cipherInt, _ := strconv.Atoi(bit)
-		xor := codebook_Lookup(cipherInt)
-		decryptedMessage = append(decryptedMessage, xor^stream)
-		stream = cipherInt ^ decryptedMessage[len(decryptedMessage)-1]
-		fmt.Printf("The deciphered value of %04b is %04b\n", cipherInt, xor^stream)
-	}
-
-	reverseSliceInt(decryptedMessage)
-	originalPlaintext = ""
-	for _, bit := range decryptedMessage {
-		originalPlaintext += strconv.Itoa(bit)
-	}
-	fmt.Printf("\nOriginal message: %v\n", originalPlaintext)
-}
-
-// Function to reverse the order of elements in a string slice
-func reverseSlice(slice []string) {
-	for i, j := 0, len(slice)-1; i < j; i, j = i+1, j-1 {
-		slice[i], slice[j] = slice[j], slice[i]
-	}
-}
-
-// Function to reverse the order of elements in an int slice
-func reverseSliceInt(slice []int) {
-	for i, j := 0, len(slice)-1; i < j; i, j = i+1, j-1 {
-		slice[i], slice[j] = slice[j], slice[i]
+	// Decryption (CFB)
+	lookupValue = codesbookLookup(iv)
+	for i := 0; i < 4; i++ {
+		plaintext := decryptBlockCFB(cipherCFB[i], lookupValue)
+		lookupValue = cipherCFB[i]
+		fmt.Printf("The plaintext value of a in CFB mode is %02b\n", plaintext)
 	}
 }
