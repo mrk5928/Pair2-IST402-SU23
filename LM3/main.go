@@ -12,7 +12,7 @@ func main() {
 	log.SetFlags(log.Lshortfile)
 
 	// Load the X.509 certificate and private key for TLS encryption
-	cer, err := tls.LoadX509KeyPair("server.crt", "server.key")
+	cer, err := tls.LoadX509KeyPair("LM3/server.crt", "LM3/server.key")
 	if err != nil {
 		log.Println(err)
 		return
