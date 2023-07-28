@@ -1,4 +1,11 @@
-// LM4: ChaCha20 Programming
+/*
+---------------------------------------------------
+-- Produced By: Pair2 of IST 402
+-- Author: Yuyao Li, Brenden Anapolsky & Mahir Khan
+-- Date: 7/27/2023
+-- Purpose: For LM4: ChaCha20 Assignment
+---------------------------------------------------
+*/
 package main
 
 import (
